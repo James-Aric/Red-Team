@@ -24,6 +24,7 @@ public class AI extends Player {
     public Socket mySocket;
     volatile Board myBoard;
     volatile boolean startIndex = true;
+    public boolean playerSpot;
 
     /**
      * The starting state of the AI
@@ -31,7 +32,7 @@ public class AI extends Player {
      * 1 = playing
      * 2 = waitforVerification
      */
-    private int state = 0;
+    public int state = 0;
     public AI(){
         super();
         this.isAI = true;
@@ -41,6 +42,7 @@ public class AI extends Player {
         }else {
             this.team = "Yellow";
         }
+        playerSpot = false;
         myCache = new PriorityQueue(200);
         myBoard = new Board(11);
         connectSocket();
@@ -63,11 +65,15 @@ public class AI extends Player {
                         if (bestPlay == null) break;
                     }
                     System.out.println(this.name + " post loop");
+                    if(mySocket == null){
+                        break;
+                    }
                     if (bestPlay != null && bestPlay.myWord != null && myBoard.verifyWordPlacement(bestPlay.placements)) {
                         //System.out.println("The AI found made a decent play");
                         System.out.println(this.name + " trying to play: "+bestPlay.myWord + "  while in state " + this.state);
                         System.out.println(this.name + " JSONIFIED DATA TO BE SET: "+GameManager.JSONifyPlayIdea(bestPlay, myBoard));
                         mySocket.emit("playWord", GameManager.JSONifyPlayIdea(bestPlay, myBoard));
+                        System.out.println("SENT JSON+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
                         this.state = 2;
                         //myBoard.addWord(bestPlay.placements);
                         GameManager.getInstance().placementsUnderConsideration.clear();
@@ -176,9 +182,10 @@ public class AI extends Player {
             IO.Options opts = new IO.Options();
             opts.forceNew = true;
             opts.reconnection = true;
-            mySocket = IO.socket("http://localhost:3000", opts);
+
+            //mySocket = IO.socket("http://localhost:3000", opts);
             mySocket.connect();
-        } catch (URISyntaxException e){
+        } catch (Exception e){
             System.err.println(e);
         }
     }
@@ -231,6 +238,7 @@ public class AI extends Player {
                         JSONObject data = (JSONObject) args[0];
                         System.out.println(data.toString());
                         boolean myTurn = data.getBoolean("isTurn");
+                        System.out.println("AI: " + AI.this.state + "       RECEIVED DATAUPDATE, IS TURN = " + myTurn + " ============================================================================================================================");
                         JSONArray jsonTiles = data.getJSONArray("tiles");
                         char[] newTiles = new char[jsonTiles.length()];
                         for(int i = 0; i < newTiles.length; i++){
@@ -262,7 +270,7 @@ public class AI extends Player {
                             try {
                                 GameManager.getInstance().updatePlayers(GameManager.getInstance().thePlayers);
                             }catch (NullPointerException e){
-                                e.printStackTrace();
+                                System.out.println("NULL POINTER LINE 270 GM ///////////////////////////////////////////////////////////////////////////////////////////////////");
                             }
                         }
                         else{
@@ -306,7 +314,9 @@ public class AI extends Player {
                 public void call(Object... args) {
                     System.out.println(AI.this.name + " got disconnect");
                     mySocket.disconnect();
-                    mySocket = null;
+                    if(!playerSpot){
+                        AI.this.mySocket.connect();
+                    }
                 }
             }).on(Socket.EVENT_ERROR, new Emitter.Listener() {
                 @Override

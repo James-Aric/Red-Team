@@ -57,7 +57,7 @@ public class GameManager {
      */
     private GameManager(){
         thePlayers = new Player[4];
-        theAIs = new AI[4];
+        theAIs = new AI[0];
         placementsUnderConsideration = new ArrayList<Placement>();
         theBoard = new Board(OswebbleGame.BOARD_SIZE);
         eventBacklog = new ArrayList<String>();
@@ -72,22 +72,27 @@ public class GameManager {
             e.printStackTrace();
         }
         for(int i = 0; i < 4; i++){
-            if(produceAI) {
-                theAIs[i] = new AI();
-                thePlayers[i] = theAIs[i];
-            }else {
-                thePlayers[i] = new Player();
-            }
+            thePlayers[i] = new Player();
         }
-
+        /*theAIs[i] = new AI();
+                thePlayers[i] = theAIs[i];*/
+        Thread aiManager = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                AIManager manager = new AIManager();
+                manager.connectSocket();
+                manager.socketEvents();
+            }
+        });
+        aiManager.start();
 
     }
-    public void Update(){
+    /*public void Update(){
         for(AI a: theAIs){
             a.update();
         }
         ApplyEventBackLog();
-    }
+    }*/
 
     public void Dispose(){
         if(socket != null)
@@ -103,6 +108,7 @@ public class GameManager {
         try {
             if(socket != null)
                 socket.disconnect();
+
             socket = null;
             socket = IO.socket("http://localhost:3000");
             socket.connect();
@@ -112,12 +118,12 @@ public class GameManager {
     }
     public void ReConnectSocket(){
         try {
-            IO.Options opts = new IO.Options();
+            /*IO.Options opts = new IO.Options();
             opts.forceNew = true;
-            opts.reconnection = true;
-            socket = IO.socket("http://localhost:3000", opts);
+            opts.reconnection = false;
+            socket = IO.socket("http://localhost:3000", opts);*/
             socket.connect();
-        } catch (URISyntaxException e){
+        } catch (Exception e){
             System.err.println(e);
         }
     }
@@ -183,14 +189,14 @@ public class GameManager {
                 System.out.println("reconnect");
                 for(int i = 0; i < 4; i++){
                     if(produceAI) {
-                        theAIs[i] = new AI();
-                        thePlayers[i] = theAIs[i];
+                        /*theAIs[i] = new AI();
+                        thePlayers[i] = theAIs[i];*/
                     }else {
                         thePlayers[i] = new Player();
                     }
                 }
             }
-        }).on("removeAI", new Emitter.Listener() {
+        })/*.on("removeAI", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
                 System.out.println("frontend got removeAI");
@@ -210,7 +216,7 @@ public class GameManager {
                     e.printStackTrace();
                 }
             }
-        }).on("connectAI", new Emitter.Listener() {
+        })*//*.on("connectAI", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
                 LogEvent("Reconnecting an AI");
@@ -249,7 +255,7 @@ public class GameManager {
                     e.printStackTrace();
                 }
             }
-        }).on("boardUpdate", new Emitter.Listener() {
+        })*/.on("boardUpdate", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
 //                LogEvent("boardUpdate");
@@ -291,7 +297,8 @@ public class GameManager {
                 }catch(ArrayIndexOutOfBoundsException e){
                     e.printStackTrace();
                 }catch(JSONException e){
-                    e.printStackTrace();
+                    System.out.println("Null bonus json fuck landon");
+                    //e.printStackTrace();
                 }
             }
         }).on("updateState", new Emitter.Listener() {
@@ -312,10 +319,10 @@ public class GameManager {
                             //the
                             isAI = true;
                             //todo reconnect an AI at that position
-                            theAIs[index].disconnectAI();
-                            theAIs[index] = null;
-                            theAIs[index] = new AI();
-                            thePlayers[index] = theAIs[index];
+                            //theAIs[index].disconnectAI();
+                            //theAIs[index] = null;
+                            //theAIs[index] = new AI();
+                            //thePlayers[index] = theAIs[index];
                         }
                         try {
                             if(player.get("score") != JSONObject.NULL)
